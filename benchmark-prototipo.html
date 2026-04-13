@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LIV Benchmark — Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --teal: #2EC4C4; --teal-dark: #20A8A8; --sidebar-bg: #3D3D3D;
+      --bg: #F5F7FA; --surface: #FFFFFF; --text: #111827; --text-muted: #6B7280;
+      --border: #E5E7EB; --success: #10B981; --warning: #F59E0B; --danger: #EF4444; --neutral: #6B7280;
+      --purple: #8B5CF6;
+    }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar { width: 240px; min-width: 240px; background: var(--sidebar-bg); display: flex; flex-direction: column; overflow-y: auto; }
+    .sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .sidebar-logo .logo-title { color: white; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
+    .sidebar-logo .logo-sub { color: var(--teal); font-size: 11px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+    .sidebar-section { padding: 16px 12px 8px; color: rgba(255,255,255,0.35); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; margin: 1px 8px; border-radius: 6px; color: rgba(255,255,255,0.65); font-size: 13.5px; cursor: pointer; transition: all 0.15s; }
+    .nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+    .nav-item.active { background: var(--teal); color: white; font-weight: 500; }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+    /* TOPBAR */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar { background: white; border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; min-height: 56px; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar-title { font-size: 15px; font-weight: 600; color: var(--text); }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-admin { background: #EEF9F9; color: var(--teal-dark); }
+    .user-name { font-size: 13px; color: var(--text-muted); }
+
+    /* CONTENT */
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .tab { padding: 8px 16px; font-size: 13.5px; font-weight: 500; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+
+    /* BUILDING HEADER */
+    .building-header { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .building-name { font-size: 18px; font-weight: 700; color: var(--text); }
+    .building-meta { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .building-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; background: #F3F4F6; color: var(--text-muted); border: 1px solid var(--border); }
+    .pill-teal { background: #EEF9F9; color: var(--teal-dark); border-color: #C5ECEC; }
+    .building-select { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: white; color: var(--text); cursor: pointer; }
+
+    /* CARDS */
+    .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .summary-card { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 14px 18px; }
+    .summary-card .label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .summary-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+    .summary-card .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .value-green { color: var(--success); } .value-yellow { color: var(--warning); } .value-red { color: var(--danger); } .value-teal { color: var(--teal); }
+
+    /* SECTION TITLE */
+    .section-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .section-title .sample { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+
+    /* BENCHMARK GRID */
+    .benchmark-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .category-card { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 16px 18px; }
+    .cat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .cat-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .percentile-pill { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .pill-success { background: #D1FAE5; color: #065F46; }
+    .pill-warning { background: #FEF3C7; color: #92400E; }
+    .pill-danger { background: #FEE2E2; color: #991B1B; }
+    .pill-neutral { background: #F3F4F6; color: #374151; }
+    .cat-amount { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .cat-per-unit { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+
+    /* DISTRIBUTION BAR */
+    .dist-bar-container { position: relative; height: 8px; background: #F3F4F6; border-radius: 4px; margin: 8px 0 4px; }
+    .dist-bar-range { position: absolute; height: 100%; border-radius: 4px; background: #E5E7EB; }
+    .dist-bar-marker { position: absolute; top: -4px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.2); transform: translateX(-50%); }
+    .dist-bar-marker-compare { position: absolute; top: -3px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 4px rgba(139,92,246,0.4); transform: translateX(-50%); background: var(--purple); opacity: 0.85; }
+    .dist-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); }
+    .cat-context { font-size: 11px; margin-top: 6px; }
+    .cat-compare-line { font-size: 11px; color: var(--purple); margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+
+    /* CHART */
+    .chart-card { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; }
+    .chart-wrapper { height: 280px; position: relative; }
+
+    /* COMPARE BANNER */
+    .compare-banner { background: #EEF9F9; border: 1px solid #C5ECEC; border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .compare-banner .cbl { font-size: 13px; font-weight: 600; color: var(--teal-dark); }
+    .compare-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: middle; margin-right: 4px; }
+
+    /* FILTER BAR */
+    .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .toggle-group { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .toggle-btn { padding: 6px 14px; font-size: 13px; background: white; border: none; border-right: 1px solid var(--border); cursor: pointer; color: var(--text-muted); transition: all 0.15s; white-space: nowrap; }
+    .toggle-btn:last-child { border-right: none; }
+    .toggle-btn.active { background: var(--teal); color: white; font-weight: 500; }
+    .toggle-btn:hover:not(.active) { background: #F9FAFB; color: var(--text); }
+    .filter-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: white; cursor: pointer; }
+    .sort-dir-btn { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: white; cursor: pointer; font-size: 14px; color: var(--text-muted); }
+    .sort-dir-btn:hover { background: #F9FAFB; }
+
+    /* TABLE */
+    .table-card { background: white; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #F9FAFB; }
+    th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; }
+    th:hover { color: var(--teal); }
+    th.sort-active { color: var(--teal); }
+    td { padding: 11px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #FAFAFA; }
+    .portfolio-row { display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: var(--success); } .dot-yellow { background: var(--warning); } .dot-red { background: var(--danger); } .dot-gray { background: #D1D5DB; }
+    .sort-icon { font-size: 10px; margin-left: 3px; opacity: 0.5; }
+    .sort-icon.active { opacity: 1; color: var(--teal); }
+
+    /* PERIOD */
+    .period-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .period-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .period-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: white; cursor: pointer; }
+
+    /* INGRESO */
+    .pct-bar { display: flex; align-items: center; gap: 8px; }
+    .pct-fill { height: 6px; border-radius: 3px; min-width: 4px; }
+
+    /* DASHBOARD HEADER */
+    .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+
+    /* ADMIN CONFIG FORM */
+    .config-panel { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 20px; }
+    .config-select-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .config-select-row label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input, .form-group select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: white; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(46,196,196,0.1); }
+    .form-section-divider { grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .form-full { grid-column: 1/-1; }
+    .amenity-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    .amenity-label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+
+    /* ALERTS */
+    .alert-box { background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #92400E; display: flex; align-items: center; gap: 8px; }
+    .alert-info { background: #EEF9F9; border-color: #C5ECEC; color: var(--teal-dark); }
+
+    /* VIEWS */
+    .view { display: none; } .view.active { display: block; }
+
+    @media (max-width: 900px) {
+      .summary-row { grid-template-columns: repeat(2, 1fr); }
+      .benchmark-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-title">LIV Benchmark</div>
+    <div class="logo-sub">Property Management</div>
+  </div>
+  <div class="sidebar-section">Principal</div>
+  <div class="nav-item" onclick="showView('dashboard')"><span class="icon">⬜</span> Dashboard</div>
+  <div class="nav-item active" onclick="showView('benchmark')"><span class="icon">📊</span> Benchmark</div>
+  <div class="nav-item" onclick="showView('portfolio')"><span class="icon">🏢</span> Portfolio</div>
+  <div class="sidebar-section">Gestión</div>
+  <div class="nav-item" onclick="showView('buildings')"><span class="icon">🏗</span> Mis Edificios</div>
+  <div class="nav-item" onclick="showView('ingreso')"><span class="icon">📝</span> Cargar Gastos</div>
+  <div class="sidebar-section">Admin</div>
+  <div class="nav-item" onclick="showView('admin')"><span class="icon">⚙️</span> Administración</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title" id="topbar-title">Benchmark de Gastos</span>
+    </div>
+    <div class="topbar-right">
+      <span class="user-name">Javier Lizana</span>
+      <span class="badge badge-admin">SUPER ADMIN</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- =================== BENCHMARK =================== -->
+    <div class="view active" id="view-benchmark">
+
+      <div class="building-header">
+        <div>
+          <div class="building-name" id="bench-building-name">Edificio Don Pepe</div>
+          <div class="building-meta" id="bench-building-meta">Las Condes · Residencial</div>
+          <div class="building-pills" id="bench-building-pills"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted);font-weight:500">Edificio:</span>
+            <select class="building-select" id="bench-select" onchange="changeBenchBuilding(this.value)">
+              <option value="0">Edificio Don Pepe</option>
+              <option value="1">Edificio Hipódromo</option>
+              <option value="2">Edificio Lira</option>
+              <option value="3">Edificio C. Robles</option>
+              <option value="4">Edificio Colón</option>
+              <option value="6">Torre Titanium</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted);font-weight:500">Período:</span>
+            <select class="period-select">
+              <option>Marzo 2026</option><option>Febrero 2026</option><option>Enero 2026</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPARE BANNER -->
+      <div class="compare-banner">
+        <span class="cbl">Comparar con:</span>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="setCompareMode('mediana',this)">Mediana del mercado</button>
+          <button class="toggle-btn" onclick="setCompareMode('edificio',this)">Otro edificio</button>
+        </div>
+        <div id="compare-edificio-selector" style="display:none;align-items:center;gap:8px">
+          <select class="filter-select" id="compare-select" onchange="updateComparison()">
+            <option value="1">Edificio Hipódromo</option>
+            <option value="2">Edificio Lira</option>
+            <option value="3">Edificio C. Robles</option>
+            <option value="4">Edificio Colón</option>
+          </select>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted)">
+          <span class="compare-dot" style="background:var(--teal)"></span> Tu edificio &nbsp;
+          <span class="compare-dot" style="background:#E5E7EB;border:1px solid #D1D5DB"></span> Mediana
+          <span id="compare-legend-extra" style="display:none">
+            &nbsp;<span class="compare-dot" style="background:var(--purple)"></span> <span id="compare-legend-name">—</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- SUMMARY CARDS -->
+      <div class="summary-row">
+        <div class="summary-card">
+          <div class="label">Score General</div>
+          <div class="value value-green" id="bench-score">P34</div>
+          <div class="sub" id="bench-score-sub">Mejor que el 66% del mercado</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Gasto Total Mes</div>
+          <div class="value value-teal" id="bench-total">$28.4M</div>
+          <div class="sub" id="bench-per-unit">$126.100 por depto</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Muestra Benchmark</div>
+          <div class="value" style="color:var(--text)">18</div>
+          <div class="sub">edificios comparables</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Categorías Alerta</div>
+          <div class="value value-yellow" id="bench-alerts">1</div>
+          <div class="sub" id="bench-alerts-sub">Seguros sobre mercado</div>
+        </div>
+      </div>
+
+      <!-- CHART -->
+      <div class="chart-card">
+        <div class="section-title">
+          Posición en el mercado por categoría
+          <span class="sample" id="bench-chart-sample">— 18 edificios similares (200–300 deptos, agua caliente centralizada, +10 años)</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="benchmarkChart"></canvas>
+        </div>
+      </div>
+
+      <!-- BENCHMARK GRID -->
+      <div class="section-title">Detalle por categoría</div>
+      <div class="benchmark-grid" id="benchmark-grid"></div>
+    </div>
+
+    <!-- =================== PORTFOLIO =================== -->
+    <div class="view" id="view-portfolio">
+
+      <div class="alert-box">⚠ <strong>2 edificios con gastos sobre mercado (P>80)</strong> — Hipódromo y Prat requieren revisión.</div>
+
+      <!-- FILTER BAR -->
+      <div class="filter-bar">
+        <span style="font-size:13px;color:var(--text-muted);font-weight:500">Filtrar:</span>
+        <div class="toggle-group" id="portfolio-type-filter">
+          <button class="toggle-btn active" onclick="portfolioFilterType('Todos',this)">Todos</button>
+          <button class="toggle-btn" onclick="portfolioFilterType('Residencial',this)">Residencial</button>
+          <button class="toggle-btn" onclick="portfolioFilterType('Oficinas',this)">Oficinas</button>
+        </div>
+        <select class="filter-select" id="portfolio-comuna-filter" onchange="renderPortfolio()">
+          <option value="">Todas las comunas</option>
+          <option value="Las Condes">Las Condes</option>
+          <option value="Santiago">Santiago</option>
+          <option value="Providencia">Providencia</option>
+          <option value="Ñuñoa">Ñuñoa</option>
+          <option value="Vitacura">Vitacura</option>
+        </select>
+        <span style="font-size:13px;color:var(--text-muted);font-weight:500;margin-left:4px">Ordenar:</span>
+        <select class="filter-select" id="portfolio-sort-field" onchange="renderPortfolio()">
+          <option value="nombre">Nombre</option>
+          <option value="score">Score</option>
+          <option value="estado">Estado</option>
+          <option value="unidades">Unidades</option>
+          <option value="comuna">Comuna</option>
+        </select>
+        <button class="sort-dir-btn" id="sort-dir-btn" onclick="toggleSortDir()" title="Cambiar dirección">↑</button>
+      </div>
+
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="setSortField('nombre')">Edificio <span class="sort-icon" id="sort-nombre">↕</span></th>
+              <th onclick="setSortField('tipo')">Tipo <span class="sort-icon" id="sort-tipo">↕</span></th>
+              <th onclick="setSortField('comuna')">Comuna <span class="sort-icon" id="sort-comuna">↕</span></th>
+              <th onclick="setSortField('unidades')">Unidades <span class="sort-icon" id="sort-unidades">↕</span></th>
+              <th>Período</th>
+              <th onclick="setSortField('score')">Score <span class="sort-icon" id="sort-score">↕</span></th>
+              <th onclick="setSortField('estado')">Estado <span class="sort-icon" id="sort-estado">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="portfolio-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- =================== DASHBOARD =================== -->
+    <div class="view" id="view-dashboard">
+      <div class="dash-header">
+        <span style="font-size:16px;font-weight:600;color:var(--text)">Resumen de Cartera</span>
+        <div class="toggle-group" id="dash-type-filter">
+          <button class="toggle-btn active" onclick="dashFilterType('Todos',this)">Todos</button>
+          <button class="toggle-btn" onclick="dashFilterType('Residencial',this)">Residencial</button>
+          <button class="toggle-btn" onclick="dashFilterType('Oficinas',this)">Oficinas</button>
+        </div>
+      </div>
+
+      <div class="summary-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="summary-card">
+          <div class="label">Edificios en cartera</div>
+          <div class="value value-teal" id="dash-total">9</div>
+          <div class="sub" id="dash-total-sub">7 residenciales · 2 oficinas</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Estado general</div>
+          <div class="value value-green" id="dash-eficientes">6</div>
+          <div class="sub" id="dash-eficientes-sub">eficientes / 2 alerta / 1 crítico</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Datos pendientes</div>
+          <div class="value value-yellow">3</div>
+          <div class="sub">edificios sin datos de marzo</div>
+        </div>
+      </div>
+
+      <!-- DISTRIBUCIÓN POR ESTADO -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="chart-card" style="margin:0">
+          <div class="section-title" style="margin-bottom:12px">Distribución por estado</div>
+          <div class="chart-wrapper" style="height:200px"><canvas id="statusChart"></canvas></div>
+        </div>
+        <div class="chart-card" style="margin:0">
+          <div class="section-title" style="margin-bottom:12px">Edificios por comuna</div>
+          <div id="comunas-list" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="section-title">Evolución del gasto promedio — Cartera LIV vs Mercado</div>
+        <div class="chart-wrapper"><canvas id="trendChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- =================== BUILDINGS =================== -->
+    <div class="view" id="view-buildings">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span class="section-title" style="margin:0">Mis Edificios</span>
+        <button onclick="showView('nuevo-edificio')" style="background:var(--teal);color:white;border:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer">+ Nuevo Edificio</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="buildings-grid"></div>
+    </div>
+
+    <!-- =================== INGRESO =================== -->
+    <div class="view" id="view-ingreso">
+      <div class="chart-card" style="max-width:700px">
+        <div class="section-title" style="margin-bottom:16px">Cargar Gastos del Período</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">EDIFICIO</label>
+            <select class="building-select" style="width:100%;padding:8px 12px">
+              <option>Edificio Don Pepe</option><option>Edificio Hipódromo</option><option>Edificio Lira</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">PERÍODO</label>
+            <select class="building-select" style="width:100%;padding:8px 12px">
+              <option>Marzo 2026</option><option>Febrero 2026</option><option>Enero 2026</option>
+            </select>
+          </div>
+        </div>
+        <table style="margin-bottom:16px">
+          <thead><tr><th>Categoría</th><th>Monto (CLP)</th><th>% del total</th></tr></thead>
+          <tbody id="ingreso-table"></tbody>
+          <tfoot>
+            <tr style="background:#F0FDFD">
+              <td style="font-weight:700;padding:12px 16px">TOTAL</td>
+              <td style="font-weight:700;padding:12px 16px">$28.400.000</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+        <div style="display:flex;gap:10px">
+          <button style="background:var(--teal);color:white;border:none;padding:9px 20px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer">Guardar borrador</button>
+          <button style="background:white;color:var(--text);border:1px solid var(--border);padding:9px 20px;border-radius:6px;font-size:13px;cursor:pointer">Enviar para verificación</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== ADMIN =================== -->
+    <div class="view" id="view-admin">
+      <div class="tabs">
+        <div class="tab active" onclick="adminTab(this,'admin-edificios')">Todos los Edificios</div>
+        <div class="tab" onclick="adminTab(this,'admin-config')">Configurar Proyecto</div>
+        <div class="tab" onclick="adminTab(this,'admin-usuarios')">Usuarios</div>
+        <div class="tab" onclick="adminTab(this,'admin-datos')">Datos Pendientes</div>
+      </div>
+
+      <!-- TAB: EDIFICIOS -->
+      <div id="admin-edificios" class="table-card">
+        <table>
+          <thead><tr><th>Edificio</th><th>Tipo</th><th>Comuna</th><th>Organización</th><th>Reportes</th><th>LIV</th><th>Acciones</th></tr></thead>
+          <tbody id="admin-table"></tbody>
+        </table>
+      </div>
+
+      <!-- TAB: CONFIGURAR PROYECTO -->
+      <div id="admin-config" style="display:none">
+        <div class="config-panel">
+          <div class="config-select-row">
+            <label>Seleccionar edificio a configurar:</label>
+            <select class="filter-select" style="min-width:220px" id="config-building-select" onchange="loadBuildingConfig(this.value)">
+              <option value="">— Selecciona un edificio —</option>
+              <option value="0">Edificio Don Pepe</option>
+              <option value="1">Edificio Hipódromo</option>
+              <option value="2">Edificio Lira</option>
+              <option value="3">Edificio C. Robles</option>
+              <option value="4">Edificio Colón</option>
+              <option value="5">Edificio San Diego</option>
+              <option value="6">Torre Titanium</option>
+              <option value="7">Edificio Corporativo</option>
+              <option value="8">Edificio Prat</option>
+            </select>
+          </div>
+          <div id="config-form-container">
+            <div class="alert-box alert-info" style="margin:0">ℹ Selecciona un edificio para ver y editar su configuración.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: USUARIOS -->
+      <div id="admin-usuarios" class="table-card" style="display:none">
+        <table>
+          <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Organización</th><th>Acciones</th></tr></thead>
+          <tbody>
+            <tr><td>Javier Lizana</td><td>jalizanab@gmail.com</td><td><span class="badge badge-admin">SUPER ADMIN</span></td><td>LIV Property Management</td><td><button style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:white">Editar</button></td></tr>
+            <tr><td>Carla Rojas</td><td>pm@livpm.cl</td><td><span class="badge" style="background:#EEF0FF;color:#3730A3">PROPERTY MGR</span></td><td>LIV Property Management</td><td><button style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:white">Editar</button></td></tr>
+            <tr><td>Mario Fuentes</td><td>comite@donpepe.cl</td><td><span class="badge" style="background:#F3F4F6;color:#374151">CLIENT</span></td><td>Edificio Don Pepe</td><td><button style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:white">Editar</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB: DATOS PENDIENTES -->
+      <div id="admin-datos" class="table-card" style="display:none">
+        <table>
+          <thead><tr><th>Edificio</th><th>Período</th><th>Enviado por</th><th>Fecha</th><th>Acciones</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Edificio Anónimo #4</td><td>Febrero 2026</td><td>colaborador@email.cl</td><td>10 Mar 2026</td>
+              <td style="display:flex;gap:6px">
+                <button style="font-size:12px;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;background:#D1FAE5;color:#065F46;font-weight:600">✓ Verificar</button>
+                <button style="font-size:12px;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;background:#FEE2E2;color:#991B1B">✗ Rechazar</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Edificio Anónimo #7</td><td>Febrero 2026</td><td>admin2@correo.cl</td><td>11 Mar 2026</td>
+              <td style="display:flex;gap:6px">
+                <button style="font-size:12px;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;background:#D1FAE5;color:#065F46;font-weight:600">✓ Verificar</button>
+                <button style="font-size:12px;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;background:#FEE2E2;color:#991B1B">✗ Rechazar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- =================== NUEVO EDIFICIO =================== -->
+    <div class="view" id="view-nuevo-edificio">
+      <div class="chart-card" style="max-width:720px">
+        <div class="section-title" style="margin-bottom:20px">Registrar Nuevo Edificio</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div style="grid-column:1/-1">
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">TIPO DE EDIFICIO</label>
+            <div style="display:flex;gap:10px">
+              <div onclick="selectType(this,'residencial')" style="flex:1;padding:14px;border:2px solid var(--teal);border-radius:8px;cursor:pointer;text-align:center;background:#EEF9F9">
+                <div style="font-size:22px">🏠</div>
+                <div style="font-weight:600;font-size:13px;margin-top:4px;color:var(--teal-dark)">Residencial</div>
+              </div>
+              <div onclick="selectType(this,'oficinas')" style="flex:1;padding:14px;border:2px solid var(--border);border-radius:8px;cursor:pointer;text-align:center">
+                <div style="font-size:22px">🏢</div>
+                <div style="font-weight:600;font-size:13px;margin-top:4px;color:var(--text-muted)">Oficinas</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">NOMBRE DEL EDIFICIO</label>
+            <input type="text" placeholder="Ej: Edificio Don Pepe" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">COMUNA</label>
+            <select class="building-select" style="width:100%;padding:8px 12px">
+              <option value="">— Seleccionar —</option>
+              <optgroup label="Región Metropolitana">
+                <option>Las Condes</option><option>Providencia</option><option>Santiago</option>
+                <option>Vitacura</option><option>Ñuñoa</option><option>La Florida</option>
+                <option>Maipú</option><option>Peñalolén</option><option>San Miguel</option>
+                <option>La Reina</option><option>Lo Barnechea</option><option>Macul</option>
+                <option>Independencia</option><option>Recoleta</option><option>Estación Central</option>
+                <option>Quilicura</option><option>Puente Alto</option><option>San Bernardo</option>
+              </optgroup>
+              <optgroup label="Otras regiones">
+                <option>Viña del Mar</option><option>Valparaíso</option><option>Concepción</option>
+                <option>Antofagasta</option><option>La Serena</option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">CANTIDAD DE DEPTOS</label>
+            <select class="building-select" style="width:100%;padding:8px 12px">
+              <option>Menos de 50</option><option>50 a 100</option><option selected>100 a 150</option>
+              <option>150 a 200</option><option>200 a 300</option><option>300 a 500</option><option>Más de 500</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">AGUA CALIENTE</label>
+            <select class="building-select" style="width:100%;padding:8px 12px">
+              <option>Centralizada instantánea</option><option>Centralizada con acumulación</option>
+              <option>Individual calefont</option><option>Individual termo eléctrico</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">CALEFACCIÓN</label>
+            <select class="building-select" style="width:100%;padding:8px 12px">
+              <option>Sin calefacción</option><option>Centralizada</option><option>Individual gas</option><option>Piso radiante</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">ANTIGÜEDAD</label>
+            <select class="building-select" style="width:100%;padding:8px 12px">
+              <option>Nuevo (0–3 años)</option><option>3 a 10 años</option>
+              <option selected>10 a 20 años</option><option>Más de 20 años</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">GESTIONADO POR LIV</label>
+            <select class="building-select" style="width:100%;padding:8px 12px">
+              <option value="yes">Sí — administrado por LIV</option>
+              <option value="no">No — edificio externo</option>
+            </select>
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px">AMENITIES</label>
+            <div style="display:flex;flex-wrap:wrap;gap:12px">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" checked> Piscina</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox"> Quincho</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" checked> Gimnasio</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox"> Salón de eventos</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox"> Lavandería común</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox"> Pet spa</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox"> Cowork</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox"> Estacionamiento visitas</label>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button style="background:var(--teal);color:white;border:none;padding:9px 20px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer">Guardar Edificio</button>
+          <button onclick="showView('buildings')" style="background:white;color:var(--text);border:1px solid var(--border);padding:9px 20px;border-radius:6px;font-size:13px;cursor:pointer">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end content -->
+</div><!-- end main -->
+
+<script>
+// ============================================================
+//  DATOS
+// ============================================================
+const edificios = [
+  { nombre:'Edificio Don Pepe',     tipo:'Residencial', comuna:'Las Condes',  unidades:'225 deptos', numUnidades:225, periodo:'Mar 2026', score:34,  estado:'HEALTHY',  gestionadoLIV:true,  agua:'Centralizada acumulación', calefaccion:'Centralizada', antiguedad:'+10 años', amenities:['Piscina','Gimnasio'], clasificacion:null },
+  { nombre:'Edificio Hipódromo',    tipo:'Residencial', comuna:'Santiago',    unidades:'282 deptos', numUnidades:282, periodo:'Mar 2026', score:82,  estado:'CRITICAL', gestionadoLIV:true,  agua:'Centralizada instantánea', calefaccion:'Sin calefacción', antiguedad:'+10 años', amenities:['Piscina','Quincho','Gimnasio'], clasificacion:null },
+  { nombre:'Edificio Lira',         tipo:'Residencial', comuna:'Santiago',    unidades:'160 deptos', numUnidades:160, periodo:'Feb 2026', score:41,  estado:'MARKET',   gestionadoLIV:true,  agua:'Individual calefont', calefaccion:'Sin calefacción', antiguedad:'3–10 años', amenities:['Gimnasio'], clasificacion:null },
+  { nombre:'Edificio C. Robles',    tipo:'Residencial', comuna:'Providencia', unidades:'250 deptos', numUnidades:250, periodo:'Mar 2026', score:68,  estado:'WARNING',  gestionadoLIV:true,  agua:'Centralizada acumulación', calefaccion:'Individual gas', antiguedad:'+10 años', amenities:['Piscina','Quincho','Gimnasio','Salón eventos'], clasificacion:null },
+  { nombre:'Edificio Colón',        tipo:'Residencial', comuna:'Ñuñoa',       unidades:'252 deptos', numUnidades:252, periodo:'Mar 2026', score:29,  estado:'HEALTHY',  gestionadoLIV:true,  agua:'Centralizada instantánea', calefaccion:'Sin calefacción', antiguedad:'+10 años', amenities:['Piscina','Gimnasio'], clasificacion:null },
+  { nombre:'Edificio San Diego',    tipo:'Residencial', comuna:'Santiago',    unidades:'660 deptos', numUnidades:660, periodo:'Mar 2026', score:37,  estado:'HEALTHY',  gestionadoLIV:false, agua:'Individual calefont', calefaccion:'Sin calefacción', antiguedad:'+20 años', amenities:['Quincho'], clasificacion:null },
+  { nombre:'Torre Titanium',        tipo:'Oficinas',    comuna:'Las Condes',  unidades:'25.000 m²', numUnidades:null, periodo:'Feb 2026', score:55,  estado:'MARKET',   gestionadoLIV:true,  agua:'Centralizada', calefaccion:'HVAC centralizado', antiguedad:'+10 años', amenities:[], clasificacion:'Clase A' },
+  { nombre:'Edificio Corporativo',  tipo:'Oficinas',    comuna:'Vitacura',    unidades:'8.500 m²',  numUnidades:null, periodo:'Ene 2026', score:44,  estado:'MARKET',   gestionadoLIV:true,  agua:'Individual', calefaccion:'HVAC individual', antiguedad:'3–10 años', amenities:[], clasificacion:'Clase B' },
+  { nombre:'Edificio Prat',         tipo:'Residencial', comuna:'Ñuñoa',       unidades:'220 deptos', numUnidades:220, periodo:'Mar 2026', score:78,  estado:'WARNING',  gestionadoLIV:false, agua:'Centralizada instantánea', calefaccion:'Sin calefacción', antiguedad:'+10 años', amenities:['Piscina','Gimnasio','Lavandería'], clasificacion:null },
+];
+
+const categoriasBase = [
+  { key:'remuneraciones', label:'Remuneraciones',         p25:11000000, mediana:14500000, p75:17000000 },
+  { key:'servicios',      label:'Servicios Básicos',      p25: 3500000, mediana: 4800000, p75: 6200000 },
+  { key:'mantenciones',   label:'Mantenciones',           p25: 2800000, mediana: 3600000, p75: 4500000 },
+  { key:'reparaciones',   label:'Reparaciones',           p25: 1200000, mediana: 2100000, p75: 3200000 },
+  { key:'seguros',        label:'Seguros',                p25: 1800000, mediana: 2500000, p75: 3500000 },
+  { key:'generales',      label:'Gastos Generales',       p25: 1400000, mediana: 1900000, p75: 2500000 },
+  { key:'asesorias',      label:'Asesorías y Honorarios', p25:  900000, mediana: 1400000, p75: 2000000 },
+];
+
+// Montos y percentiles por edificio
+const buildingCategories = {
+  0: [ // Don Pepe
+    { monto:12800000, percentil:28 }, { monto: 4200000, percentil:45 },
+    { monto: 3100000, percentil:32 }, { monto: 1800000, percentil:51 },
+    { monto: 3900000, percentil:72 }, { monto: 1600000, percentil:38 },
+    { monto: 1000000, percentil:22 },
+  ],
+  1: [ // Hipódromo
+    { monto:18500000, percentil:75 }, { monto: 7200000, percentil:88 },
+    { monto: 5100000, percentil:82 }, { monto: 2100000, percentil:54 },
+    { monto: 4200000, percentil:80 }, { monto: 2800000, percentil:76 },
+    { monto: 1800000, percentil:65 },
+  ],
+  2: [ // Lira
+    { monto:10200000, percentil:38 }, { monto: 3800000, percentil:42 },
+    { monto: 2600000, percentil:28 }, { monto: 1500000, percentil:44 },
+    { monto: 2100000, percentil:48 }, { monto: 1500000, percentil:35 },
+    { monto:  900000, percentil:19 },
+  ],
+  3: [ // C. Robles
+    { monto:15200000, percentil:62 }, { monto: 5400000, percentil:65 },
+    { monto: 4100000, percentil:66 }, { monto: 2400000, percentil:62 },
+    { monto: 3200000, percentil:65 }, { monto: 2100000, percentil:62 },
+    { monto: 1400000, percentil:50 },
+  ],
+  4: [ // Colón
+    { monto:11500000, percentil:22 }, { monto: 3600000, percentil:35 },
+    { monto: 2900000, percentil:29 }, { monto: 1400000, percentil:38 },
+    { monto: 2000000, percentil:40 }, { monto: 1350000, percentil:29 },
+    { monto:  850000, percentil:15 },
+  ],
+  6: [ // Titanium
+    { monto:38000000, percentil:55 }, { monto:12000000, percentil:52 },
+    { monto: 9500000, percentil:48 }, { monto: 4200000, percentil:56 },
+    { monto: 8500000, percentil:58 }, { monto: 5200000, percentil:53 },
+    { monto: 3800000, percentil:62 },
+  ],
+};
+
+// ============================================================
+//  STATE
+// ============================================================
+let currentBuildingIdx = 0;
+let compareMode = 'mediana';
+let compareBuildingIdx = 1;
+let portfolioTypeFilter = 'Todos';
+let portfolioComunaFilter = '';
+let portfolioSortField = 'nombre';
+let portfolioSortDir = 'asc';
+let dashTypeFilter = 'Todos';
+let benchmarkChartInstance = null;
+let statusChartInstance = null;
+let trendChartInstance = null;
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function getStatusConfig(estado) {
+  return { HEALTHY:{dot:'dot-green',label:'Eficiente',color:'var(--success)'}, MARKET:{dot:'dot-gray',label:'En mercado',color:'var(--neutral)'}, WARNING:{dot:'dot-yellow',label:'Sobre mercado',color:'var(--warning)'}, CRITICAL:{dot:'dot-red',label:'Outlier',color:'var(--danger)'} }[estado] || {dot:'dot-gray',label:'—',color:'var(--neutral)'};
+}
+function getPillClass(p) {
+  if (p < 40) return 'pill-success';
+  if (p < 60) return 'pill-neutral';
+  if (p < 80) return 'pill-warning';
+  return 'pill-danger';
+}
+function getMarkerColor(p) {
+  if (p < 40) return 'var(--success)';
+  if (p < 60) return 'var(--neutral)';
+  if (p < 80) return 'var(--warning)';
+  return 'var(--danger)';
+}
+function formatM(n) { return '$' + (n/1000000).toFixed(1) + 'M'; }
+
+// ============================================================
+//  BENCHMARK
+// ============================================================
+function changeBenchBuilding(idx) {
+  currentBuildingIdx = parseInt(idx);
+  const ed = edificios[currentBuildingIdx];
+  document.getElementById('bench-building-name').textContent = ed.nombre;
+  document.getElementById('bench-building-meta').textContent = ed.comuna + ' · ' + ed.tipo;
+  const pills = [
+    `<span class="pill pill-teal">${ed.tipo}</span>`,
+    `<span class="pill">${ed.unidades}</span>`,
+    ed.agua ? `<span class="pill">${ed.agua}</span>` : '',
+    ed.calefaccion && ed.calefaccion !== 'Sin calefacción' ? `<span class="pill">${ed.calefaccion}</span>` : '',
+    `<span class="pill">${ed.antiguedad}</span>`,
+    ed.amenities.length ? `<span class="pill">${ed.amenities.slice(0,2).join(' · ')}</span>` : '',
+    ed.clasificacion ? `<span class="pill">${ed.clasificacion}</span>` : '',
+  ];
+  document.getElementById('bench-building-pills').innerHTML = pills.filter(Boolean).join('');
+
+  const cats = buildingCategories[currentBuildingIdx] || buildingCategories[0];
+  const total = cats.reduce((a,c)=>a+c.monto,0);
+  const avgPct = Math.round(cats.reduce((a,c)=>a+c.percentil,0)/cats.length);
+  const alertas = cats.filter(c=>c.percentil>60);
+
+  document.getElementById('bench-score').textContent = 'P'+avgPct;
+  document.getElementById('bench-score').className = 'value ' + (avgPct<40?'value-green':avgPct<60?'value-teal':avgPct<80?'value-yellow':'value-red');
+  document.getElementById('bench-score-sub').textContent = 'Mejor que el '+(100-avgPct)+'% del mercado';
+  document.getElementById('bench-total').textContent = formatM(total);
+  if (ed.numUnidades) document.getElementById('bench-per-unit').textContent = '$'+(total/ed.numUnidades).toLocaleString('es-CL',{maximumFractionDigits:0})+' por depto';
+  else document.getElementById('bench-per-unit').textContent = 'Por m² calculado';
+  document.getElementById('bench-alerts').textContent = alertas.length;
+  document.getElementById('bench-alerts-sub').textContent = alertas.length ? alertas.map(c=>categoriasBase[cats.indexOf(c)]?.label||'—').join(', ') : 'Todas las categorías OK';
+
+  renderBenchmarkGrid();
+  renderBenchmarkChart();
+
+  // update compare selector options
+  const csel = document.getElementById('compare-select');
+  Array.from(csel.options).forEach(o => {
+    o.disabled = parseInt(o.value) === currentBuildingIdx;
+  });
+}
+
+function setCompareMode(mode, btn) {
+  compareMode = mode;
+  document.querySelectorAll('.compare-banner .toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const edSel = document.getElementById('compare-edificio-selector');
+  const extraLegend = document.getElementById('compare-legend-extra');
+  if (mode === 'edificio') {
+    edSel.style.display = 'flex';
+    extraLegend.style.display = 'inline';
+    updateComparison();
+  } else {
+    edSel.style.display = 'none';
+    extraLegend.style.display = 'none';
+    renderBenchmarkGrid();
+    renderBenchmarkChart();
+  }
+}
+
+function updateComparison() {
+  compareBuildingIdx = parseInt(document.getElementById('compare-select').value);
+  document.getElementById('compare-legend-name').textContent = edificios[compareBuildingIdx]?.nombre || '—';
+  renderBenchmarkGrid();
+  renderBenchmarkChart();
+}
+
+function renderBenchmarkGrid() {
+  const cats = buildingCategories[currentBuildingIdx] || buildingCategories[0];
+  const compareCats = (compareMode === 'edificio') ? (buildingCategories[compareBuildingIdx] || null) : null;
+  const ed = edificios[currentBuildingIdx];
+  const grid = document.getElementById('benchmark-grid');
+  grid.innerHTML = cats.map((cat, i) => {
+    const base = categoriasBase[i];
+    const pct = cat.percentil;
+    const pillClass = getPillClass(pct);
+    const markerColor = getMarkerColor(pct);
+    const markerLeft = Math.min(Math.max(pct, 4), 96);
+    const perUnit = ed.numUnidades ? '$'+Math.round(cat.monto/ed.numUnidades).toLocaleString('es-CL')+' / depto' : '—';
+    let contexto = pct < 40 ? `✓ Gasta menos que el ${100-pct}% de edificios similares`
+                 : pct < 60 ? `Dentro del rango de mercado`
+                 : pct < 80 ? `⚠ Gasta más que el ${pct}% del mercado`
+                 : `⚠ Significativamente sobre mercado — revisar`;
+
+    let compareHtml = '';
+    if (compareCats && compareCats[i]) {
+      const compMonto = compareCats[i].monto;
+      const compPct = compareCats[i].percentil;
+      const compLeft = Math.min(Math.max(compPct, 4), 96);
+      const diff = cat.monto - compMonto;
+      const diffStr = diff > 0 ? '+'+formatM(diff) : formatM(diff);
+      compareHtml = `<div class="dist-bar-marker-compare" style="left:${compLeft}%"></div>
+        <div class="cat-compare-line">● ${edificios[compareBuildingIdx].nombre}: ${formatM(compMonto)} (P${compPct}) — diferencia: ${diffStr}</div>`;
+    }
+
+    return `<div class="category-card">
+      <div class="cat-header">
+        <span class="cat-name">${base.label}</span>
+        <span class="percentile-pill ${pillClass}">P${pct}</span>
+      </div>
+      <div class="cat-amount">${formatM(cat.monto)}</div>
+      <div class="cat-per-unit">${perUnit}</div>
+      <div class="dist-bar-container">
+        <div class="dist-bar-range" style="left:25%;width:50%"></div>
+        <div class="dist-bar-marker" style="left:${markerLeft}%;background:${markerColor}"></div>
+        ${compareHtml.split('<div class="cat-compare-line')[0]}
+      </div>
+      <div class="dist-labels">
+        <span>P25: ${formatM(base.p25)}</span>
+        <span>Mediana: ${formatM(base.mediana)}</span>
+        <span>P75: ${formatM(base.p75)}</span>
+      </div>
+      <div class="cat-context" style="color:${markerColor}">${contexto}</div>
+      ${compareCats && compareCats[i] ? `<div class="cat-compare-line">● ${edificios[compareBuildingIdx].nombre}: ${formatM(compareCats[i].monto)} (P${compareCats[i].percentil}) — diferencia: ${(cat.monto-compareCats[i].monto)>0?'+':''+(formatM(cat.monto-compareCats[i].monto))}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderBenchmarkChart() {
+  const ctx = document.getElementById('benchmarkChart');
+  if (!ctx) return;
+  if (benchmarkChartInstance) { benchmarkChartInstance.destroy(); benchmarkChartInstance = null; }
+  const cats = buildingCategories[currentBuildingIdx] || buildingCategories[0];
+  const compareCats = (compareMode === 'edificio') ? (buildingCategories[compareBuildingIdx] || null) : null;
+  const labels = categoriasBase.map(c => c.label);
+
+  const datasets = [
+    { label: edificios[currentBuildingIdx].nombre, data: cats.map(c=>c.monto/1000000), backgroundColor:'#2EC4C4', borderRadius:4 },
+    { label: 'Mediana mercado', data: categoriasBase.map(c=>c.mediana/1000000), backgroundColor:'#E5E7EB', borderRadius:4 },
+  ];
+  if (compareCats) {
+    datasets.push({ label: edificios[compareBuildingIdx].nombre, data: compareCats.map(c=>c.monto/1000000), backgroundColor:'#C4B5FD', borderRadius:4 });
+  }
+
+  benchmarkChartInstance = new Chart(ctx, {
+    type:'bar',
+    data: { labels, datasets },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ font:{size:12}, boxWidth:12 } } },
+      scales:{
+        x:{ grid:{display:false}, ticks:{font:{size:11}} },
+        y:{ grid:{color:'#F3F4F6'}, ticks:{ callback:v=>'$'+v+'M', font:{size:11} } }
+      }
+    }
+  });
+}
+
+// ============================================================
+//  PORTFOLIO
+// ============================================================
+let portfolioSortField2 = 'nombre';
+
+function portfolioFilterType(tipo, btn) {
+  portfolioTypeFilter = tipo;
+  document.querySelectorAll('#portfolio-type-filter .toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPortfolio();
+}
+
+function setSortField(field) {
+  if (portfolioSortField === field) {
+    portfolioSortDir = portfolioSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    portfolioSortField = field;
+    portfolioSortDir = 'asc';
+  }
+  document.getElementById('sort-dir-btn').textContent = portfolioSortDir === 'asc' ? '↑' : '↓';
+  renderPortfolio();
+}
+
+function toggleSortDir() {
+  portfolioSortDir = portfolioSortDir === 'asc' ? 'desc' : 'asc';
+  document.getElementById('sort-dir-btn').textContent = portfolioSortDir === 'asc' ? '↑' : '↓';
+  renderPortfolio();
+}
+
+function renderPortfolio() {
+  const comunaFilter = document.getElementById('portfolio-comuna-filter')?.value || '';
+  const sortSel = document.getElementById('portfolio-sort-field')?.value || portfolioSortField;
+  portfolioSortField = sortSel;
+
+  let list = [...edificios];
+  if (portfolioTypeFilter !== 'Todos') list = list.filter(e=>e.tipo===portfolioTypeFilter);
+  if (comunaFilter) list = list.filter(e=>e.comuna===comunaFilter);
+
+  list.sort((a,b) => {
+    let va=a[portfolioSortField], vb=b[portfolioSortField];
+    if (portfolioSortField==='unidades') { va=a.numUnidades||0; vb=b.numUnidades||0; }
+    if (portfolioSortField==='estado') {
+      const order={HEALTHY:0,MARKET:1,WARNING:2,CRITICAL:3};
+      va=order[a.estado]||0; vb=order[b.estado]||0;
+    }
+    if (typeof va==='string') va=va.toLowerCase();
+    if (typeof vb==='string') vb=vb.toLowerCase();
+    const res = va < vb ? -1 : va > vb ? 1 : 0;
+    return portfolioSortDir==='asc' ? res : -res;
+  });
+
+  // update sort icons
+  ['nombre','tipo','comuna','unidades','score','estado'].forEach(f=>{
+    const el = document.getElementById('sort-'+f);
+    if (el) { el.textContent = portfolioSortField===f ? (portfolioSortDir==='asc'?'↑':'↓') : '↕'; el.className = 'sort-icon'+(portfolioSortField===f?' active':''); }
+  });
+
+  const tbody = document.getElementById('portfolio-table');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px">No hay edificios que coincidan con los filtros.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(e => {
+    const s = getStatusConfig(e.estado);
+    return `<tr>
+      <td><div class="portfolio-row"><span class="status-dot ${s.dot}"></span><span style="font-weight:500">${e.nombre}</span></div></td>
+      <td>${e.tipo}</td>
+      <td>${e.comuna}</td>
+      <td>${e.unidades}</td>
+      <td>${e.periodo}</td>
+      <td><span class="percentile-pill ${getPillClass(e.score)}" style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">P${e.score}</span></td>
+      <td style="color:${s.color};font-weight:500">${s.label}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+//  DASHBOARD
+// ============================================================
+function dashFilterType(tipo, btn) {
+  dashTypeFilter = tipo;
+  document.querySelectorAll('#dash-type-filter .toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDashStats();
+  renderStatusChart();
+  renderComunasList();
+}
+
+function renderDashStats() {
+  let list = [...edificios];
+  if (dashTypeFilter !== 'Todos') list = list.filter(e=>e.tipo===dashTypeFilter);
+  const res = list.filter(e=>e.tipo==='Residencial').length;
+  const ofic = list.filter(e=>e.tipo==='Oficinas').length;
+  const eficientes = list.filter(e=>e.estado==='HEALTHY').length;
+  const alerta = list.filter(e=>e.estado==='WARNING').length;
+  const criticos = list.filter(e=>e.estado==='CRITICAL').length;
+
+  document.getElementById('dash-total').textContent = list.length;
+  document.getElementById('dash-total-sub').textContent = dashTypeFilter==='Todos'
+    ? `${res} residenciales · ${ofic} oficinas`
+    : `${list.length} edificios de ${dashTypeFilter.toLowerCase()}`;
+  document.getElementById('dash-eficientes').textContent = eficientes;
+  document.getElementById('dash-eficientes-sub').textContent = `eficientes / ${alerta} alerta / ${criticos} crítico`;
+}
+
+function renderStatusChart() {
+  const ctx = document.getElementById('statusChart');
+  if (!ctx) return;
+  if (statusChartInstance) { statusChartInstance.destroy(); statusChartInstance = null; }
+  let list = [...edificios];
+  if (dashTypeFilter !== 'Todos') list = list.filter(e=>e.tipo===dashTypeFilter);
+  const counts = [
+    list.filter(e=>e.estado==='HEALTHY').length,
+    list.filter(e=>e.estado==='MARKET').length,
+    list.filter(e=>e.estado==='WARNING').length,
+    list.filter(e=>e.estado==='CRITICAL').length,
+  ];
+  statusChartInstance = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels:['Eficiente','En mercado','Sobre mercado','Outlier'], datasets:[{data:counts, backgroundColor:['#10B981','#D1D5DB','#F59E0B','#EF4444'], borderWidth:0}] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ font:{size:12}, boxWidth:12, padding:12 } } } }
+  });
+}
+
+function renderComunasList() {
+  let list = [...edificios];
+  if (dashTypeFilter !== 'Todos') list = list.filter(e=>e.tipo===dashTypeFilter);
+  const comunaCount = {};
+  list.forEach(e=>{ comunaCount[e.comuna]=(comunaCount[e.comuna]||0)+1; });
+  const sorted = Object.entries(comunaCount).sort((a,b)=>b[1]-a[1]);
+  const max = sorted[0]?.[1] || 1;
+  document.getElementById('comunas-list').innerHTML = sorted.map(([c,n])=>`
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:13px;min-width:100px;color:var(--text)">${c}</span>
+      <div style="flex:1;background:#F3F4F6;border-radius:4px;height:8px">
+        <div style="width:${(n/max)*100}%;background:var(--teal);height:8px;border-radius:4px"></div>
+      </div>
+      <span style="font-size:12px;color:var(--text-muted);min-width:20px;text-align:right">${n}</span>
+    </div>`).join('');
+}
+
+function renderTrendChart() {
+  const ctx = document.getElementById('trendChart');
+  if (!ctx) return;
+  if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
+  const meses = ['Nov 25','Dic 25','Ene 26','Feb 26','Mar 26'];
+  trendChartInstance = new Chart(ctx, {
+    type:'line',
+    data:{ labels:meses, datasets:[
+      { label:'Cartera LIV ($/depto)', data:[135000,131000,128000,126500,126100], borderColor:'#2EC4C4', backgroundColor:'rgba(46,196,196,0.1)', tension:0.3, fill:true, pointBackgroundColor:'#2EC4C4' },
+      { label:'Mercado promedio ($/depto)', data:[148000,147000,146500,145000,144000], borderColor:'#D1D5DB', backgroundColor:'transparent', tension:0.3, borderDash:[4,4], pointBackgroundColor:'#9CA3AF' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ font:{size:12}, boxWidth:12 } } },
+      scales:{ x:{grid:{display:false}}, y:{grid:{color:'#F3F4F6'}, ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}} }
+    }
+  });
+}
+
+// ============================================================
+//  BUILDINGS GRID
+// ============================================================
+function renderBuildings() {
+  const grid = document.getElementById('buildings-grid');
+  grid.innerHTML = edificios.map(e => {
+    const s = getStatusConfig(e.estado);
+    return `<div style="background:white;border-radius:10px;border:1px solid var(--border);padding:16px;cursor:pointer" onclick="showView('benchmark')">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span class="status-dot ${s.dot}" style="width:10px;height:10px;border-radius:50%;display:inline-block"></span>
+        <span style="font-weight:600;font-size:14px">${e.nombre}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted)">${e.tipo} · ${e.comuna}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${e.unidades}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+        <span class="percentile-pill ${getPillClass(e.score)}" style="padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">P${e.score}</span>
+        <span style="font-size:11px;color:var(--text-muted)">${e.periodo}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+//  ADMIN TABLE
+// ============================================================
+function renderAdmin() {
+  const tbody = document.getElementById('admin-table');
+  tbody.innerHTML = edificios.map((e,i) => `
+    <tr>
+      <td style="font-weight:500">${e.nombre}</td>
+      <td>${e.tipo}</td>
+      <td>${e.comuna}</td>
+      <td>LIV Property Management</td>
+      <td>5 reportes</td>
+      <td>${e.gestionadoLIV ? '<span style="color:var(--success);font-weight:600">✓ Sí</span>' : '<span style="color:var(--text-muted)">No</span>'}</td>
+      <td style="display:flex;gap:6px">
+        <button onclick="openConfig(${i})" style="font-size:12px;padding:4px 10px;border:1px solid var(--teal);color:var(--teal-dark);border-radius:4px;cursor:pointer;background:white;font-weight:500">⚙ Configurar</button>
+        <button style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:white">Editar</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openConfig(idx) {
+  // switch to config tab
+  document.querySelectorAll('#view-admin .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#view-admin .tab')[1].classList.add('active');
+  adminTab(document.querySelectorAll('#view-admin .tab')[1], 'admin-config');
+  document.getElementById('config-building-select').value = idx;
+  loadBuildingConfig(idx);
+}
+
+function loadBuildingConfig(idx) {
+  const container = document.getElementById('config-form-container');
+  if (!idx && idx !== 0) {
+    container.innerHTML = '<div class="alert-box alert-info" style="margin:0">ℹ Selecciona un edificio para ver y editar su configuración.</div>';
+    return;
+  }
+  const e = edificios[parseInt(idx)];
+  if (!e) return;
+
+  const isResidencial = e.tipo === 'Residencial';
+  const amenityOptions = ['Piscina','Quincho','Gimnasio','Salón eventos','Lavandería','Pet spa','Cowork','Estacionamiento visitas'];
+  const amenitiesHtml = amenityOptions.map(a=>`
+    <label class="amenity-label"><input type="checkbox" ${e.amenities.includes(a)?'checked':''}> ${a}</label>`).join('');
+
+  container.innerHTML = `
+    <div class="form-grid">
+      <div class="form-section-divider">Identificación</div>
+      <div class="form-group">
+        <label>Nombre del edificio</label>
+        <input type="text" value="${e.nombre}">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select>
+          <option ${isResidencial?'selected':''}>Residencial</option>
+          <option ${!isResidencial?'selected':''}>Oficinas</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Comuna</label>
+        <select>
+          <option value="">— Seleccionar —</option>
+          ${['Las Condes','Providencia','Santiago','Vitacura','Ñuñoa','La Florida','Maipú','Peñalolén','San Miguel','La Reina','Lo Barnechea','Macul','Independencia','Quilicura','Puente Alto'].map(c=>`<option ${e.comuna===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Gestionado por LIV</label>
+        <select>
+          <option value="yes" ${e.gestionadoLIV?'selected':''}>Sí</option>
+          <option value="no" ${!e.gestionadoLIV?'selected':''}>No — edificio externo</option>
+        </select>
+      </div>
+
+      <div class="form-section-divider">Características</div>
+      ${isResidencial ? `
+      <div class="form-group">
+        <label>Cantidad de deptos</label>
+        <input type="number" value="${e.numUnidades || ''}">
+      </div>
+      <div class="form-group">
+        <label>Agua caliente</label>
+        <select>
+          ${['Centralizada instantánea','Centralizada con acumulación','Individual calefont','Individual termo eléctrico'].map(o=>`<option ${e.agua===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Calefacción</label>
+        <select>
+          ${['Sin calefacción','Centralizada','Individual gas','Piso radiante'].map(o=>`<option ${e.calefaccion===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>` : `
+      <div class="form-group">
+        <label>Superficie (m²)</label>
+        <input type="text" value="${e.unidades.replace(' m²','').replace('.','')}" placeholder="Ej: 25000">
+      </div>
+      <div class="form-group">
+        <label>Clasificación</label>
+        <select>
+          ${['Clase A','Clase B','Clase C'].map(o=>`<option ${e.clasificacion===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tipo HVAC</label>
+        <select>
+          ${['HVAC centralizado','HVAC individual','VRF','Split centralizado'].map(o=>`<option ${e.calefaccion===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>`}
+      <div class="form-group">
+        <label>Antigüedad</label>
+        <select>
+          ${['Nuevo (0–3 años)','3 a 10 años','10 a 20 años','+10 años','+20 años','Más de 20 años'].map(o=>`<option ${e.antiguedad===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+
+      ${isResidencial ? `
+      <div class="form-section-divider">Amenities</div>
+      <div class="form-full">
+        <div class="amenity-grid">${amenitiesHtml}</div>
+      </div>` : ''}
+
+      <div class="form-section-divider">Benchmark</div>
+      <div class="form-group">
+        <label>Visible en benchmark externo</label>
+        <select><option>Sí — anónimo</option><option>No — solo interno</option></select>
+      </div>
+      <div class="form-group">
+        <label>Estado de datos</label>
+        <select><option>Activo</option><option>Pausado</option><option>Pendiente verificación</option></select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <button onclick="alert('Cambios guardados ✓')" style="background:var(--teal);color:white;border:none;padding:9px 20px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer">Guardar cambios</button>
+      <button style="background:white;color:var(--text);border:1px solid var(--border);padding:9px 20px;border-radius:6px;font-size:13px;cursor:pointer">Cancelar</button>
+    </div>`;
+}
+
+// ============================================================
+//  INGRESO TABLE
+// ============================================================
+function renderIngreso() {
+  const tbody = document.getElementById('ingreso-table');
+  const montos = [12800000,4200000,3100000,1800000,3900000,1600000,1000000];
+  const total = montos.reduce((a,b)=>a+b,0);
+  tbody.innerHTML = categoriasBase.map((cat,i) => {
+    const pct = Math.round(montos[i]/total*100);
+    return `<tr>
+      <td style="font-weight:500">${cat.label}</td>
+      <td><input type="text" value="${montos[i].toLocaleString('es-CL')}" style="width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right"></td>
+      <td><div class="pct-bar"><div class="pct-fill" style="width:${pct*2}px;background:var(--teal);opacity:0.7"></div><span style="font-size:12px;color:var(--text-muted)">${pct}%</span></div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+//  NAVIGATION
+// ============================================================
+const titles = {
+  benchmark:'Benchmark de Gastos', portfolio:'Portfolio de Cartera',
+  dashboard:'Dashboard', buildings:'Mis Edificios',
+  ingreso:'Cargar Gastos', admin:'Administración', 'nuevo-edificio':'Nuevo Edificio',
+};
+
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('view-'+viewId).classList.add('active');
+  document.getElementById('topbar-title').textContent = titles[viewId]||'';
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if (n.getAttribute('onclick')?.includes("'"+viewId+"'")) n.classList.add('active');
+  });
+  if (viewId==='dashboard') {
+    setTimeout(()=>{ renderStatusChart(); renderTrendChart(); renderComunasList(); },50);
+  }
+}
+
+function adminTab(el, sectionId) {
+  document.querySelectorAll('#view-admin .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['admin-edificios','admin-config','admin-usuarios','admin-datos'].forEach(id=>{
+    document.getElementById(id).style.display = id===sectionId ? 'block' : 'none';
+  });
+}
+
+function selectType(el, tipo) {
+  document.querySelectorAll('#view-nuevo-edificio [onclick*="selectType"]').forEach(d=>{
+    d.style.border = '2px solid var(--border)';
+    d.style.background = 'white';
+    d.querySelector('div:last-child').style.color = 'var(--text-muted)';
+  });
+  el.style.border = '2px solid var(--teal)';
+  el.style.background = '#EEF9F9';
+  el.querySelector('div:last-child').style.color = 'var(--teal-dark)';
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+changeBenchBuilding(0);
+renderPortfolio();
+renderBuildings();
+renderAdmin();
+renderIngreso();
+setTimeout(()=>{ renderStatusChart(); renderTrendChart(); renderComunasList(); }, 150);
+</script>
+</body>
+</html>
