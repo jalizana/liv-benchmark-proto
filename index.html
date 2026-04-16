@@ -105,7 +105,7 @@
   </style>
 </head>
 <body>
- 
+
 <div class="sidebar">
   <div class="sidebar-logo">
     <div class="logo-title">LIV Benchmark</div>
@@ -121,7 +121,7 @@
   <div class="sidebar-section">Admin</div>
   <div class="nav-item" onclick="showView('admin')"><span class="icon">⚙️</span> Administración</div>
 </div>
- 
+
 <div class="main">
   <div class="topbar">
     <div class="topbar-left">
@@ -133,9 +133,9 @@
       <span class="badge badge-admin">SUPER ADMIN</span>
     </div>
   </div>
- 
+
   <div class="content">
- 
+
     <!-- =================== BENCHMARK =================== -->
     <div class="view active" id="view-benchmark">
       <div class="building-header">
@@ -151,7 +151,7 @@
           </div>
         </div>
       </div>
- 
+
       <div class="compare-banner">
         <span class="cbl">Comparar con:</span>
         <div class="toggle-group">
@@ -169,7 +169,7 @@
           </span>
         </div>
       </div>
- 
+
       <div class="summary-row">
         <div class="summary-card">
           <div class="label">Score General</div>
@@ -192,7 +192,7 @@
           <div class="sub" id="bench-alerts-sub">—</div>
         </div>
       </div>
- 
+
       <div class="chart-card">
         <div class="section-title">
           Posición en el mercado por categoría
@@ -200,11 +200,11 @@
         </div>
         <div class="chart-wrapper"><canvas id="benchmarkChart"></canvas></div>
       </div>
- 
+
       <div class="section-title">Detalle por categoría</div>
       <div class="benchmark-grid" id="benchmark-grid"></div>
     </div>
- 
+
     <!-- =================== PORTFOLIO =================== -->
     <div class="view" id="view-portfolio">
       <div id="portfolio-alert-box"></div>
@@ -245,7 +245,7 @@
         </table>
       </div>
     </div>
- 
+
     <!-- =================== DASHBOARD =================== -->
     <div class="view" id="view-dashboard">
       <div class="dash-header">
@@ -288,7 +288,7 @@
         <div class="chart-wrapper"><canvas id="trendChart"></canvas></div>
       </div>
     </div>
- 
+
     <!-- =================== ADMIN =================== -->
     <div class="view" id="view-admin">
       <div class="tabs">
@@ -310,7 +310,7 @@
         </table>
       </div>
     </div>
- 
+
     <!-- =================== MIS EDIFICIOS =================== -->
     <div class="view" id="view-buildings">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -319,7 +319,7 @@
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="buildings-grid"></div>
     </div>
- 
+
     <!-- =================== CARGAR GASTOS =================== -->
     <div class="view" id="view-ingreso">
       <div class="chart-card" style="max-width:700px">
@@ -356,10 +356,10 @@
         </div>
       </div>
     </div>
- 
+
   </div>
 </div>
- 
+
 <script>
 // ============================================================
 //  DATOS REALES — 46 EDIFICIOS
@@ -412,7 +412,7 @@ const benchmarkData = [
   {n:"Edificio Columbus Park", t:"Residencial", c:"Providencia", q:"Q4 2025", total:12705909, score:27, estado:"HEALTHY", cats:[{m:6012965,p:69},{m:3189442,p:41},{m:1138956,p:5},{m:161309,p:0},{m:924960,p:53},{m:431555,p:12},{m:846722,p:11}]},
   {n:"Marcel Duhaut IV (Dic)", t:"Residencial", c:"Las Condes", q:"Q4 2025", total:8543582, score:14, estado:"HEALTHY", cats:[{m:3674555,p:29},{m:1935871,p:14},{m:1215403,p:9},{m:0,p:0},{m:311875,p:20},{m:835007,p:22},{m:570871,p:5}]},
 ];
- 
+
 const catStats = [
   {key:"remuneraciones", label:"Remuneraciones",      p25:3109833, mediana:4230571, p75:6292847},
   {key:"servicios",      label:"Servicios Básicos",   p25:2498809, mediana:3398032, p75:4670147},
@@ -422,7 +422,7 @@ const catStats = [
   {key:"generales",      label:"Gastos Generales",    p25:868560,  mediana:6906775, p75:8511360},
   {key:"asesorias",      label:"Asesorías y Hon.",    p25:1835551, mediana:2543875, p75:3763795},
 ];
- 
+
 // ============================================================
 //  FICHAS DE EDIFICIOS — unidades, año, agua, amenities
 // ============================================================
@@ -474,7 +474,7 @@ const fichasData = {
   "Edificio Columbus Park": {u:88, anio:2022, agua:"Calefont individual", calef:false, amenities:["Piscina", "Gimnasio", "Quincho", "Salón Multiuso"], plat:"Kastor", liv:false},
   "Marcel Duhaut IV (Dic)": {u:48, anio:2015, agua:"Caldera c/acumulación", calef:true, amenities:["Salón Multiuso", "Jardines"], plat:"Comunidad Feliz", liv:false},
 };
- 
+
 // ============================================================
 //  STATE
 // ============================================================
@@ -488,7 +488,7 @@ let dashTypeFilter = 'Todos';
 let benchmarkChartInstance = null;
 let statusChartInstance = null;
 let trendChartInstance = null;
- 
+
 // ============================================================
 //  HELPERS
 // ============================================================
@@ -539,7 +539,7 @@ function adminTab(el, id) {
     if (el2) el2.style.display = n===id ? '' : 'none';
   });
 }
- 
+
 // ============================================================
 //  MIS EDIFICIOS
 // ============================================================
@@ -570,7 +570,7 @@ function renderBuildings() {
     </div>`;
   }).join('');
 }
- 
+
 // ============================================================
 //  CARGAR GASTOS
 // ============================================================
@@ -602,7 +602,7 @@ function updateIngresoTotal() {
     if (el) el.textContent = total > 0 && vals[i] > 0 ? (vals[i]/total*100).toFixed(1)+'%' : '—';
   });
 }
- 
+
 // ============================================================
 //  INIT DROPDOWNS
 // ============================================================
@@ -616,7 +616,7 @@ function initDropdowns() {
     if (i === currentBuildingIdx) opt.selected = true;
     sel.appendChild(opt);
   });
- 
+
   // Compare select
   const csel = document.getElementById('compare-select');
   benchmarkData.forEach((b,i) => {
@@ -626,7 +626,7 @@ function initDropdowns() {
     if (i === compareBuildingIdx) opt.selected = true;
     csel.appendChild(opt);
   });
- 
+
   // Portfolio comuna filter
   const comunas = [...new Set(benchmarkData.map(b=>b.c))].sort();
   const cFilter = document.getElementById('portfolio-comuna-filter');
@@ -636,7 +636,7 @@ function initDropdowns() {
     cFilter.appendChild(opt);
   });
 }
- 
+
 // ============================================================
 //  BENCHMARK
 // ============================================================
@@ -644,10 +644,10 @@ function changeBenchBuilding(idx) {
   currentBuildingIdx = parseInt(idx);
   const b = benchmarkData[currentBuildingIdx];
   const ficha = fichasData[b.n] || null;
- 
+
   document.getElementById('bench-building-name').textContent = b.n;
   document.getElementById('bench-building-meta').textContent = b.c + ' · ' + b.t + ' · ' + b.q;
- 
+
   // Pills: tipo, comuna, período + datos de ficha si disponibles
   let pills = `<span class="pill pill-teal">${b.t}</span><span class="pill">${b.c}</span><span class="pill">${b.q}</span>`;
   if (ficha) {
@@ -658,31 +658,31 @@ function changeBenchBuilding(idx) {
     ficha.amenities.forEach(a => { pills += `<span class="pill">${a}</span>`; });
   }
   document.getElementById('bench-building-pills').innerHTML = pills;
- 
+
   const total = b.total;
   const avgPct = b.score;
   const alertas = b.cats.filter((c,i) => c.p > 60 && c.m > 0);
- 
+
   document.getElementById('bench-score').textContent = 'P'+avgPct;
   document.getElementById('bench-score').className = 'value ' + (avgPct<40?'value-green':avgPct<60?'value-teal':avgPct<80?'value-yellow':'value-red');
   document.getElementById('bench-score-sub').textContent = avgPct<50 ? 'Mejor que el '+(100-avgPct)+'% del mercado' : 'Por encima del '+avgPct+'% del mercado';
   document.getElementById('bench-total').textContent = formatM(total);
- 
+
   // Sub del gasto total: mostrar $/depto si hay ficha con unidades
   const perUnitText = ficha && ficha.u
     ? `${b.q} · ${b.t} · ${formatM(Math.round(total/ficha.u))}/depto`
     : `${b.q} · ${b.t}`;
   document.getElementById('bench-period').textContent = perUnitText;
- 
+
   document.getElementById('bench-alerts').textContent = alertas.length;
   document.getElementById('bench-alerts-sub').textContent = alertas.length
     ? alertas.map(c => catStats[b.cats.indexOf(c)]?.label||'—').slice(0,2).join(', ')
     : 'Todas las categorías OK';
- 
+
   renderBenchmarkGrid();
   renderBenchmarkChart();
 }
- 
+
 function setCompareMode(mode, btn) {
   compareMode = mode;
   document.querySelectorAll('.compare-banner .toggle-btn').forEach(b=>b.classList.remove('active'));
@@ -700,14 +700,14 @@ function setCompareMode(mode, btn) {
     renderBenchmarkChart();
   }
 }
- 
+
 function updateComparison() {
   compareBuildingIdx = parseInt(document.getElementById('compare-select').value);
   document.getElementById('compare-legend-name').textContent = benchmarkData[compareBuildingIdx]?.n || '—';
   renderBenchmarkGrid();
   renderBenchmarkChart();
 }
- 
+
 function renderBenchmarkGrid() {
   const b = benchmarkData[currentBuildingIdx];
   const ficha = fichasData[b.n] || null;
@@ -724,7 +724,7 @@ function renderBenchmarkGrid() {
                  : pct < 60 ? `Dentro del rango de mercado`
                  : pct < 80 ? `⚠ Gasta más que el ${pct}% del mercado`
                  : `⚠ Significativamente sobre mercado — revisar`;
- 
+
     let compareHtml = '';
     if (cb && cb.cats[i]) {
       const cc = cb.cats[i];
@@ -734,7 +734,7 @@ function renderBenchmarkGrid() {
       compareHtml = `<div class="dist-bar-marker-compare" style="left:${compLeft}%"></div>
         <div class="cat-compare-line">● ${cb.n}: ${formatM(cc.m)} (P${cc.p}) — dif: ${diffStr}</div>`;
     }
- 
+
     return `<div class="category-card">
       <div class="cat-header">
         <span class="cat-name">${stat.label}</span>
@@ -757,7 +757,7 @@ function renderBenchmarkGrid() {
     </div>`;
   }).join('');
 }
- 
+
 function renderBenchmarkChart() {
   const ctx = document.getElementById('benchmarkChart');
   if (!ctx) return;
@@ -765,13 +765,13 @@ function renderBenchmarkChart() {
   const b = benchmarkData[currentBuildingIdx];
   const cb = compareMode === 'edificio' ? benchmarkData[compareBuildingIdx] : null;
   const labels = catStats.map(c => c.label);
- 
+
   const datasets = [
     { label: b.n, data: b.cats.map(c=>c.m>0?c.m/1000000:0), backgroundColor:'#2EC4C4', borderRadius:4 },
     { label: 'Mediana mercado', data: catStats.map(c=>c.mediana/1000000), backgroundColor:'#E5E7EB', borderRadius:4 },
   ];
   if (cb) datasets.push({ label: cb.n, data: cb.cats.map(c=>c.m>0?c.m/1000000:0), backgroundColor:'#C4B5FD', borderRadius:4 });
- 
+
   benchmarkChartInstance = new Chart(ctx, {
     type:'bar', data:{ labels, datasets },
     options:{
@@ -784,7 +784,7 @@ function renderBenchmarkChart() {
     }
   });
 }
- 
+
 // ============================================================
 //  PORTFOLIO
 // ============================================================
@@ -817,12 +817,12 @@ function renderPortfolio() {
     const r = va < vb ? -1 : va > vb ? 1 : 0;
     return portfolioSortDir === 'asc' ? r : -r;
   });
- 
+
   ['nombre','tipo','comuna','total','score','estado'].forEach(f=>{
     const el = document.getElementById('sort-'+f);
     if (el) { el.textContent = portfolioSortField===f?(portfolioSortDir==='asc'?'↑':'↓'):'↕'; el.className='sort-icon'+(portfolioSortField===f?' active':''); }
   });
- 
+
   // Alert box
   const criticals = benchmarkData.filter(b=>b.estado==='CRITICAL');
   const warnings = benchmarkData.filter(b=>b.estado==='WARNING');
@@ -830,7 +830,7 @@ function renderPortfolio() {
   if (criticals.length || warnings.length > 2) {
     alertBox.innerHTML = `<div class="alert-box">⚠ <strong>${criticals.length} outlier${criticals.length!==1?'s':''} · ${warnings.length} sobre mercado</strong> — ${[...criticals,...warnings].slice(0,3).map(b=>b.n).join(', ')} requieren revisión.</div>`;
   } else alertBox.innerHTML = '';
- 
+
   const tbody = document.getElementById('portfolio-table');
   tbody.innerHTML = list.map(b => {
     const s = getStatusConfig(b.estado);
@@ -845,7 +845,7 @@ function renderPortfolio() {
     </tr>`;
   }).join('');
 }
- 
+
 // ============================================================
 //  DASHBOARD
 // ============================================================
@@ -924,7 +924,7 @@ function renderCategoryChart() {
     }
   });
 }
- 
+
 // ============================================================
 //  ADMIN
 // ============================================================
@@ -944,7 +944,7 @@ function renderAdmin() {
     </tr>`;
   }).join('');
 }
- 
+
 // ============================================================
 //  INIT
 // ============================================================
@@ -953,4 +953,3 @@ changeBenchBuilding(currentBuildingIdx);
 </script>
 </body>
 </html>
- 
